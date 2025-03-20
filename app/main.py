@@ -5,6 +5,7 @@ from bson import ObjectId
 from typing import List
 import models
 import os
+from contextlib import asynccontextmanager
 
 app = FastAPI()
 
@@ -15,16 +16,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.on_event("startup")
-async def startup_db_client():
-    app.mongodb_client = AsyncIOMotorClient(os.getenv("MONGODB_URL"))
-    app.mongodb = app.mongodb_client[os.getenv("MONGODB_DB")]
-    print("Connected to MongoDB!")
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    app.mongodb_client.close()
 
 @app.get("/")
 async def root():
@@ -57,15 +48,15 @@ async def update_item(id: str, item: models.ItemModel):
         item_dict = item.dict()
         # Remove _id if it exists to avoid conflicts
         item_dict.pop('id', None)
-        
+
         update_result = await app.mongodb.items.update_one(
             {"_id": ObjectId(id)}, {"$set": item_dict}
         )
-        
+
         if update_result.modified_count == 1:
             updated_item = await app.mongodb.items.find_one({"_id": ObjectId(id)})
             return models.ItemModel(**updated_item)
-            
+
         raise HTTPException(status_code=404, detail=f"Item with id {id} not found")
     except:
         raise HTTPException(status_code=400, detail=f"Invalid id format or item data")
@@ -80,3 +71,12 @@ async def delete_item(id: str):
     except:
         raise HTTPException(status_code=400, detail=f"Invalid id format")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.mongodb_client = AsyncIOMotorClient(os.getenv("MONGODB_URL"))
+    app.mongodb = app.mongodb_client[os.getenv("MONGODB_DB")]
+    print("Connected to MongoDB!")
+    yield
+    app.mongodb_client.close()
+
+app.router.lifespan_context = lifespan
