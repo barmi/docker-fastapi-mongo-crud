@@ -23,8 +23,16 @@ async def root():
 
 @app.post("/items/", response_model=models.ItemModel, status_code=status.HTTP_201_CREATED)
 async def create_item(item: models.ItemModel):
-    new_item = await app.mongodb.items.insert_one(item.dict())
+    # 여기서 model_dump()를 사용하여 딕셔너리로 변환 (dict() 대신)
+    item_dict = item.model_dump(exclude={"id"})
+
+    new_item = await app.mongodb.items.insert_one(item_dict)
     created_item = await app.mongodb.items.find_one({"_id": new_item.inserted_id})
+
+    # ObjectId를 문자열로 변환
+    if created_item and "_id" in created_item:
+        created_item["_id"] = str(created_item["_id"])
+
     return models.ItemModel(**created_item)
 
 @app.get("/items/", response_model=List[models.ItemModel])
