@@ -4,6 +4,10 @@ from bson import ObjectId
 
 class PyObjectId(ObjectId):
     @classmethod
+    def __get_pydantic_core_schema__(cls, _source_type: Any, handler: Any) -> Dict[str, Any]:
+        return handler.generate_schema(str)
+
+    @classmethod
     def __get_pydantic_json_schema__(cls, _source_type: Any, _handler: Any) -> Dict[str, Any]:
         return {
             "type": "string",
