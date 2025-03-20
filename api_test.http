@@ -1,0 +1,16 @@
+@rpc_url = http://10.211.55.4:8000/items/
+
+### GET request to example server
+GET {{rpc_url}}
+
+### POST request to example server
+POST {{rpc_url}}
+Content-Type: application/json
+
+{
+  "name": "keyboard",
+  "price": 100,
+  "quantity": 10,
+  "description": "This is a keyboard"
+}
+
